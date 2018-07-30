@@ -32,3 +32,7 @@ parser.add_argument('train_dir', help='Directory with TSV count files. All files
 parser.add_argument('param_file', help='Output YAML file with trained parameters')
 
 args = parser.parse_args()
+
+count_files = glob('{}/*.tsv'.format(args.train_dir))
+assert len(count_files) > 0, 'No *.tsv file in the provided train directory'
+
