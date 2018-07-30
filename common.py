@@ -5,6 +5,11 @@ MIN_FL, MAX_FL = 50, 220
 FLS = list(range(MIN_FL, MAX_FL))
 CHR13, CHR18, CHR21 = 12, 17, 20
 DIAGNOSED_CHROMOSOMES = [CHR13, CHR18, CHR21]
+REFERENCE_CHROMOSOMES = {
+    CHR13: [2, 3, 6],
+    CHR18: [3, 6, 7, 8, 9, 15],
+    CHR21: [0, 3, 7, 9, 18, 19, 21]
+}
 
 
 def load_counts(count_file):
