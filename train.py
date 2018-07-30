@@ -41,32 +41,36 @@ assert len(count_files) > 0, 'No *.tsv file in the provided train directory'
 afls = np.array([common.load_counts(cf) for cf in count_files])
 
 
-def train_sehnert(diagnosed_chromosome, fls):
+def train_ncv(diagnosed_chromosome, fls):
     mapped_reads = fls.sum(axis=(1, 2))
     refs = fls[:, common.REFERENCE_CHROMOSOMES[diagnosed_chromosome], :].sum(axis=(1, 2)) / mapped_reads
     tris = fls[:, diagnosed_chromosome, :].sum(axis=1) / mapped_reads
     ratios = tris / refs
-    return np.mean(ratios), np.std(ratios)
+    return float(np.mean(ratios)), float(np.std(ratios))
 
 
-m13, s13 = train_sehnert(common.CHR13, afls)
-m18, s18 = train_sehnert(common.CHR18, afls)
-m21, s21 = train_sehnert(common.CHR21, afls)
+m13, s13 = train_ncv(common.CHR13, afls)
+m18, s18 = train_ncv(common.CHR18, afls)
+m21, s21 = train_ncv(common.CHR21, afls)
+
+params = {
+    common.METHOD_NCV: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
+    common.METHOD_SZ: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
+}
+
+for chromosome in common.DIAGNOSED_CHROMOSOMES:
+
+    # NCV parameters
+    ncv_mean, ncv_std = train_ncv(chromosome, afls)
+    params[common.METHOD_NCV][chromosome][common.ATTR_MEAN] = ncv_mean
+    params[common.METHOD_NCV][chromosome][common.ATTR_STD] = ncv_std
+
+    # Size selection parameters
+    size_fls = afls[:, :, :common.SZ_FL - common.MIN_FL]
+    size_mean, size_std = train_ncv(chromosome, size_fls)
+    params[common.METHOD_SZ][chromosome][common.ATTR_MEAN] = size_mean
+    params[common.METHOD_SZ][chromosome][common.ATTR_STD] = size_std
+
 
 with open(args.param_file, 'w') as out:
-    yaml.dump({
-        common.METHOD_NCV: {
-            common.CHR13: {
-                common.ATTR_MEAN: float(m13),
-                common.ATTR_STD: float(s13)
-            },
-            common.CHR18: {
-                common.ATTR_MEAN: float(m18),
-                common.ATTR_STD: float(s18)
-            },
-            common.CHR21: {
-                common.ATTR_MEAN: float(m21),
-                common.ATTR_STD: float(s21)
-            }
-        }
-    }, out, default_flow_style=False)
+    yaml.dump(params, out, default_flow_style=False)

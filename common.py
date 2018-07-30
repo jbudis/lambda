@@ -1,7 +1,7 @@
 import pandas as pd
 
 AUTOSOMES = ['chr{}'.format(i) for i in range(22)]
-MIN_FL, MAX_FL = 50, 220
+MIN_FL, MAX_FL, SZ_FL = 50, 220, 150
 FLS = list(range(MIN_FL, MAX_FL))
 CHR13, CHR18, CHR21 = 12, 17, 20
 DIAGNOSED_CHROMOSOMES = [CHR13, CHR18, CHR21]
@@ -13,6 +13,8 @@ REFERENCE_CHROMOSOMES = {
 ATTR_MEAN = 'mean'
 ATTR_STD = 'std'
 METHOD_NCV = 'NCV'
+METHOD_SZ = 'SZ'
+METHODS = [METHOD_NCV, METHOD_SZ]
 
 def load_counts(count_file):
 
