@@ -5,9 +5,6 @@ import numpy as np
 from glob import glob
 import common
 import yaml
-import rpy2.robjects
-import rpy2.robjects.numpy2ri
-import rpy2.robjects.pandas2ri
 
 np.random.seed(0)
 
@@ -53,12 +50,33 @@ def train_fl(diagnosed_chromosome, fls):
     return float(np.mean(max_lambdas)), float(np.std(max_lambdas))
 
 
+# Error ellipse
+
+def train_ellipse_variance(diagnosed_chromosome, fls, methods_params):
+
+    size_counts = fls[:, :, :common.SZ_FL - common.MIN_FL]
+    size_scores = np.array([common.calc_score_ncv(diagnosed_chromosome, counts,
+                                                  methods_params[common.METHOD_SZ]) for counts in size_counts])
+
+    fl_scores = np.array([common.calc_score_fl(diagnosed_chromosome, counts,
+                                               methods_params[common.METHOD_FL]) for counts in fls])
+
+    scores = np.array([size_scores, fl_scores])
+    eigenvalues, eigenvectors = np.linalg.eig(np.corrcoef(scores))
+
+    vx = float(max(eigenvalues[0], eigenvalues[1]))
+    vy = float(min(eigenvalues[0], eigenvalues[1]))
+
+    return vx, vy
+
+
 # Calculating and storing parameters
 
 params = {
     common.METHOD_NCV: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
     common.METHOD_SZ: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
-    common.METHOD_FL: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
+    common.METHOD_FL: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
+    common.METHOD_SZ_FL: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
 }
 
 
@@ -79,6 +97,11 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     fl_mean, fl_std = train_fl(chromosome, afls)
     params[common.METHOD_FL][chromosome][common.ATTR_MEAN] = fl_mean
     params[common.METHOD_FL][chromosome][common.ATTR_STD] = fl_std
+
+    # Size + FL parameters
+    vx, vy = train_ellipse_variance(chromosome, afls, params)
+    params[common.METHOD_SZ_FL][chromosome][common.ATTR_VX] = vx
+    params[common.METHOD_SZ_FL][chromosome][common.ATTR_VY] = vy
 
 with open(args.param_file, 'w') as out:
     yaml.dump(params, out, default_flow_style=False)

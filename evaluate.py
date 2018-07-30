@@ -34,34 +34,6 @@ all_counts = common.load_counts(args.counts)
 size_counts = all_counts[:, :common.SZ_FL-common.MIN_FL]
 
 
-# NCV Score
-
-def calc_score_ncv(diagnosed_chromosome, counts, method_params):
-
-    counts_per_chromosome = counts.sum(axis=1)
-
-    mapped_reads = counts_per_chromosome.sum()
-    refs = counts_per_chromosome[common.REFERENCE_CHROMOSOMES[diagnosed_chromosome]].sum() / mapped_reads
-    tris = counts_per_chromosome[diagnosed_chromosome] / mapped_reads
-    ratio = tris / refs
-
-    m = method_params[diagnosed_chromosome][common.ATTR_MEAN]
-    s = method_params[diagnosed_chromosome][common.ATTR_STD]
-
-    return (ratio - m) / s
-
-
-# FL score
-
-def calc_score_fl(diagnosed_chromosome, counts, method_params):
-
-    max_lambda = common.calc_max_lambda_score(counts, diagnosed_chromosome)
-
-    m = method_params[diagnosed_chromosome][common.ATTR_MEAN]
-    s = method_params[diagnosed_chromosome][common.ATTR_STD]
-    return (max_lambda - m) / s
-
-
 # Combination of scores
 
 def r_chi_square(z1_np, z2_np):
@@ -73,6 +45,25 @@ def r_chi_square(z1_np, z2_np):
     return rpy2.robjects.numpy2ri.ri2py(rz)[0]
 
 
+def r_chi_square_s(s):
+    command = 'newZS = function(s) qnorm(pchisq(s, df=2, lower.tail=FALSE, log.p=TRUE), lower.tail=FALSE, log.p=TRUE)'
+    rpy2.robjects.r(command)
+    s = rpy2.robjects.numpy2ri.py2ri(np.array([s]))
+    rz = rpy2.robjects.r.newZS(s)
+    return rpy2.robjects.numpy2ri.ri2py(rz)
+
+
+# Ellipse correction
+
+def calc_ellipse_dist(diagnosed_chromosome, zx, zy, method_params):
+    vx = method_params[diagnosed_chromosome][common.ATTR_VX]
+    vy = method_params[diagnosed_chromosome][common.ATTR_VY]
+    alpha = np.radians(45)
+    distance = (zx*np.cos(alpha) + zy*np.sin(alpha))**2 / vx + \
+               (zx*np.sin(alpha) - zy*np.cos(alpha))**2 / vy
+    return r_chi_square_s(distance)[0]
+
+
 # Storing results
 
 METHOD, CHROMOSOME, SCORE = 'Method', 'Chromosome', 'Score'
@@ -81,7 +72,7 @@ zscore_items = []
 for chromosome in common.DIAGNOSED_CHROMOSOMES:
 
     # NCV score
-    score_ncv = calc_score_ncv(chromosome, all_counts, params[common.METHOD_NCV])
+    score_ncv = common.calc_score_ncv(chromosome, all_counts, params[common.METHOD_NCV])
     zscore_items.append({
         METHOD: common.METHOD_NCV,
         CHROMOSOME: chromosome+1,
@@ -89,7 +80,7 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     })
 
     # Size score
-    score_sz = calc_score_ncv(chromosome, size_counts, params[common.METHOD_SZ])
+    score_sz = common.calc_score_ncv(chromosome, size_counts, params[common.METHOD_SZ])
     zscore_items.append({
         METHOD: common.METHOD_SZ,
         CHROMOSOME: chromosome+1,
@@ -97,7 +88,7 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     })
 
     # FL score
-    score_fl = calc_score_fl(chromosome, all_counts, params[common.METHOD_FL])
+    score_fl = common.calc_score_fl(chromosome, all_counts, params[common.METHOD_FL])
     zscore_items.append({
         METHOD: common.METHOD_FL,
         CHROMOSOME: chromosome+1,
@@ -109,6 +100,13 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
         METHOD: common.METHOD_NCV_FL,
         CHROMOSOME: chromosome+1,
         SCORE: r_chi_square(score_ncv, score_fl)
+    })
+
+    # SIZE + FL score
+    zscore_items.append({
+        METHOD: common.METHOD_SZ_FL,
+        CHROMOSOME: chromosome+1,
+        SCORE: calc_ellipse_dist(chromosome, score_sz, score_fl, params[common.METHOD_SZ_FL])
     })
 
 
