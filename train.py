@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import numpy as np
 from glob import glob
 import common
+import yaml
 
 # import matplotlib.pyplot as plt
 # from scipy import stats
@@ -48,6 +49,24 @@ def train_sehnert(ref, fls):
     return np.mean(ratios), np.std(ratios)
 
 
-print(train_sehnert(common.CHR13, afls))
-print(train_sehnert(common.CHR18, afls))
-print(train_sehnert(common.CHR21, afls))
+m13, s13 = train_sehnert(common.CHR13, afls)
+m18, s18 = train_sehnert(common.CHR18, afls)
+m21, s21 = train_sehnert(common.CHR21, afls)
+
+with open(args.param_file, 'w') as out:
+    yaml.dump({
+        'NCV': {
+            common.CHR13: {
+                common.ATTR_MEAN: float(m13),
+                common.ATTR_STD: float(s13)
+            },
+            common.CHR18: {
+                common.ATTR_MEAN: float(m18),
+                common.ATTR_STD: float(s18)
+            },
+            common.CHR21: {
+                common.ATTR_MEAN: float(m21),
+                common.ATTR_STD: float(s21)
+            }
+        }
+    }, out, default_flow_style=False)

@@ -10,6 +10,8 @@ REFERENCE_CHROMOSOMES = {
     CHR18: [3, 6, 7, 8, 9, 15],
     CHR21: [0, 3, 7, 9, 18, 19, 21]
 }
+ATTR_MEAN = 'mean'
+ATTR_STD = 'std'
 
 
 def load_counts(count_file):
