@@ -5,19 +5,9 @@ import numpy as np
 import common
 import yaml
 import pandas as pd
-
-# import matplotlib.pyplot as plt
-# from scipy import stats
-# from sklearn.decomposition import PCA
-# import seaborn as sns
-# from scipy import stats
-# from glob import glob
-# import os
-# from itertools import product
-# import matplotlib.cm as cm
-# from matplotlib.patches import Ellipse
-# import matplotlib.patheffects as path_effects
-# import rpy2
+import rpy2.robjects
+import rpy2.robjects.numpy2ri
+import rpy2.robjects.pandas2ri
 
 np.random.seed(0)
 
@@ -72,6 +62,17 @@ def calc_score_fl(diagnosed_chromosome, counts, method_params):
     return (max_lambda - m) / s
 
 
+# Combination of scores
+
+def r_chi_square(z1_np, z2_np):
+    command = 'newZ = function(z1, z2) qnorm(pchisq(z1**2 +z2**2, df=2, lower.tail=FALSE, log.p=TRUE), lower.tail=FALSE, log.p=TRUE)'
+    rpy2.robjects.r(command)
+    z1 = rpy2.robjects.numpy2ri.py2ri(np.array([z1_np]))
+    z2 = rpy2.robjects.numpy2ri.py2ri(np.array([z2_np]))
+    rz = rpy2.robjects.r.newZ(z1, z2)
+    return rpy2.robjects.numpy2ri.ri2py(rz)[0]
+
+
 # Storing results
 
 METHOD, CHROMOSOME, SCORE = 'Method', 'Chromosome', 'Score'
@@ -80,25 +81,36 @@ zscore_items = []
 for chromosome in common.DIAGNOSED_CHROMOSOMES:
 
     # NCV score
+    score_ncv = calc_score_ncv(chromosome, all_counts, params[common.METHOD_NCV])
     zscore_items.append({
         METHOD: common.METHOD_NCV,
         CHROMOSOME: chromosome+1,
-        SCORE: calc_score_ncv(chromosome, all_counts, params[common.METHOD_NCV])
+        SCORE: score_ncv
     })
 
     # Size score
+    score_sz = calc_score_ncv(chromosome, size_counts, params[common.METHOD_SZ])
     zscore_items.append({
         METHOD: common.METHOD_SZ,
         CHROMOSOME: chromosome+1,
-        SCORE: calc_score_ncv(chromosome, size_counts, params[common.METHOD_SZ])
+        SCORE: score_sz
     })
 
     # FL score
+    score_fl = calc_score_fl(chromosome, all_counts, params[common.METHOD_FL])
     zscore_items.append({
         METHOD: common.METHOD_FL,
         CHROMOSOME: chromosome+1,
-        SCORE: calc_score_fl(chromosome, all_counts, params[common.METHOD_FL])
+        SCORE: score_fl
     })
+
+    # NCV + FL score
+    zscore_items.append({
+        METHOD: common.METHOD_NCV_FL,
+        CHROMOSOME: chromosome+1,
+        SCORE: r_chi_square(score_ncv, score_fl)
+    })
+
 
 zscores = pd.DataFrame(zscore_items)
 print(zscores.pivot(index=METHOD, columns=CHROMOSOME, values=SCORE))
