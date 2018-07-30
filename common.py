@@ -12,7 +12,7 @@ REFERENCE_CHROMOSOMES = {
 }
 ATTR_MEAN = 'mean'
 ATTR_STD = 'std'
-
+METHOD_NCV = 'NCV'
 
 def load_counts(count_file):
 

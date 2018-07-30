@@ -41,10 +41,10 @@ assert len(count_files) > 0, 'No *.tsv file in the provided train directory'
 afls = np.array([common.load_counts(cf) for cf in count_files])
 
 
-def train_sehnert(ref, fls):
+def train_sehnert(diagnosed_chromosome, fls):
     mapped_reads = fls.sum(axis=(1, 2))
-    refs = fls[:, common.REFERENCE_CHROMOSOMES[ref], :].sum(axis=(1, 2)) / mapped_reads
-    tris = fls[:, ref, :].sum(axis=1) / mapped_reads
+    refs = fls[:, common.REFERENCE_CHROMOSOMES[diagnosed_chromosome], :].sum(axis=(1, 2)) / mapped_reads
+    tris = fls[:, diagnosed_chromosome, :].sum(axis=1) / mapped_reads
     ratios = tris / refs
     return np.mean(ratios), np.std(ratios)
 
@@ -55,7 +55,7 @@ m21, s21 = train_sehnert(common.CHR21, afls)
 
 with open(args.param_file, 'w') as out:
     yaml.dump({
-        'NCV': {
+        common.METHOD_NCV: {
             common.CHR13: {
                 common.ATTR_MEAN: float(m13),
                 common.ATTR_STD: float(s13)
