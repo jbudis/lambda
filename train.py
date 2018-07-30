@@ -5,19 +5,9 @@ import numpy as np
 from glob import glob
 import common
 import yaml
-
-# import matplotlib.pyplot as plt
-# from scipy import stats
-# from sklearn.decomposition import PCA
-# import seaborn as sns
-# from scipy import stats
-# from glob import glob
-# import os
-# from itertools import product
-# import matplotlib.cm as cm
-# from matplotlib.patches import Ellipse
-# import matplotlib.patheffects as path_effects
-# import rpy2
+import rpy2.robjects
+import rpy2.robjects.numpy2ri
+import rpy2.robjects.pandas2ri
 
 np.random.seed(0)
 
@@ -45,8 +35,8 @@ assert len(count_files) > 0, 'No *.tsv file in the provided train directory'
 
 afls = np.array([common.load_counts(cf) for cf in count_files])
 
-# NCV Score
 
+# NCV Score
 
 def train_ncv(diagnosed_chromosome, fls):
     mapped_reads = fls.sum(axis=(1, 2))
@@ -62,16 +52,14 @@ def train_fl(diagnosed_chromosome, fls):
     max_lambdas = np.array([common.calc_max_lambda_score(counts, diagnosed_chromosome) for counts in fls])
     return float(np.mean(max_lambdas)), float(np.std(max_lambdas))
 
-# Calculating parameters
 
+# Calculating and storing parameters
 
 params = {
     common.METHOD_NCV: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
     common.METHOD_SZ: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
     common.METHOD_FL: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
 }
-
-# Storing parameters
 
 
 for chromosome in common.DIAGNOSED_CHROMOSOMES:
