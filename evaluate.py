@@ -21,6 +21,8 @@ import pandas as pd
 
 np.random.seed(0)
 
+# Parsing arguments
+
 parser = ArgumentParser(description='Calculates standard and FL-based score for diagnosed sample'
                                     'and predicts diagnosis, i.e. positive, false positive, uninformative, negative')
 
@@ -32,6 +34,9 @@ parser.add_argument('param_file', help='YAML file with trained parameters (outpu
 
 args = parser.parse_args()
 
+
+# Loading input files
+
 with open(args.param_file) as param_f:
     params = yaml.load(param_f)
 
@@ -39,7 +44,9 @@ all_counts = common.load_counts(args.counts)
 size_counts = all_counts[:, :common.SZ_FL-common.MIN_FL]
 
 
-def calc_zscore_ncv(diagnosed_chromosome, counts, method_params):
+# NCV Score
+
+def calc_score_ncv(diagnosed_chromosome, counts, method_params):
 
     counts_per_chromosome = counts.sum(axis=1)
 
@@ -54,8 +61,20 @@ def calc_zscore_ncv(diagnosed_chromosome, counts, method_params):
     return (ratio - m) / s
 
 
-METHOD, CHROMOSOME, SCORE = 'Method', 'Chromosome', 'Score'
+# FL score
 
+def calc_score_fl(diagnosed_chromosome, counts, method_params):
+
+    max_lambda = common.calc_max_lambda_score(counts, diagnosed_chromosome)
+
+    m = method_params[diagnosed_chromosome][common.ATTR_MEAN]
+    s = method_params[diagnosed_chromosome][common.ATTR_STD]
+    return (max_lambda - m) / s
+
+
+# Storing results
+
+METHOD, CHROMOSOME, SCORE = 'Method', 'Chromosome', 'Score'
 
 zscore_items = []
 for chromosome in common.DIAGNOSED_CHROMOSOMES:
@@ -64,14 +83,21 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     zscore_items.append({
         METHOD: common.METHOD_NCV,
         CHROMOSOME: chromosome+1,
-        SCORE: calc_zscore_ncv(chromosome, all_counts, params[common.METHOD_NCV])
+        SCORE: calc_score_ncv(chromosome, all_counts, params[common.METHOD_NCV])
     })
 
     # Size score
     zscore_items.append({
         METHOD: common.METHOD_SZ,
         CHROMOSOME: chromosome+1,
-        SCORE: calc_zscore_ncv(chromosome, size_counts, params[common.METHOD_SZ])
+        SCORE: calc_score_ncv(chromosome, size_counts, params[common.METHOD_SZ])
+    })
+
+    # FL score
+    zscore_items.append({
+        METHOD: common.METHOD_FL,
+        CHROMOSOME: chromosome+1,
+        SCORE: calc_score_fl(chromosome, all_counts, params[common.METHOD_FL])
     })
 
 zscores = pd.DataFrame(zscore_items)

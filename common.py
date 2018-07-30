@@ -1,7 +1,9 @@
 import pandas as pd
+import numpy as np
 
 AUTOSOMES = ['chr{}'.format(i) for i in range(22)]
 MIN_FL, MAX_FL, SZ_FL = 50, 220, 150
+
 FLS = list(range(MIN_FL, MAX_FL))
 CHR13, CHR18, CHR21 = 12, 17, 20
 DIAGNOSED_CHROMOSOMES = [CHR13, CHR18, CHR21]
@@ -14,7 +16,9 @@ ATTR_MEAN = 'mean'
 ATTR_STD = 'std'
 METHOD_NCV = 'NCV'
 METHOD_SZ = 'SZ'
-METHODS = [METHOD_NCV, METHOD_SZ]
+METHOD_FL = 'FL'
+METHODS = [METHOD_NCV, METHOD_SZ, METHOD_FL]
+
 
 def load_counts(count_file):
 
@@ -29,3 +33,18 @@ def load_counts(count_file):
                                'i.e. {} columns. ' \
                                'Loading file {}'.format(MIN_FL, MAX_FL, MAX_FL - MIN_FL, count_file)
     return counts
+
+
+MIN_STEP, MAX_STEP = 75, 96
+
+
+def calc_lambda_score(fls, diagnosed_chromosome, p, step):
+    chr_l = fls[diagnosed_chromosome, :step+1].sum()
+    nl = fls[:, :step+1].sum()
+    return (chr_l - nl*p) / np.sqrt(nl*p*(1-p))
+
+
+def calc_max_lambda_score(fls, diagnosed_chromosome):
+    p = fls[diagnosed_chromosome, :].sum() / fls.sum()
+    print(max(calc_lambda_score(fls, diagnosed_chromosome, p, step) for step in range(MIN_STEP, MAX_STEP)))
+    return max(calc_lambda_score(fls, diagnosed_chromosome, p, step) for step in range(MIN_STEP, MAX_STEP))

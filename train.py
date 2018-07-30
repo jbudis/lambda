@@ -21,6 +21,8 @@ import yaml
 
 np.random.seed(0)
 
+# Parsing arguments
+
 parser = ArgumentParser(description='Trains parameters for FL a NCV models.'
                                     'Parameters are then utilized in the evaluate.py script to infer predictions '
                                     'for aneuploidy of diagnosed fetus')
@@ -35,10 +37,15 @@ parser.add_argument('param_file', help='Output YAML file with trained parameters
 
 args = parser.parse_args()
 
+
+# Loading input files
+
 count_files = glob('{}/*.tsv'.format(args.train_dir))
 assert len(count_files) > 0, 'No *.tsv file in the provided train directory'
 
 afls = np.array([common.load_counts(cf) for cf in count_files])
+
+# NCV Score
 
 
 def train_ncv(diagnosed_chromosome, fls):
@@ -49,14 +56,23 @@ def train_ncv(diagnosed_chromosome, fls):
     return float(np.mean(ratios)), float(np.std(ratios))
 
 
-m13, s13 = train_ncv(common.CHR13, afls)
-m18, s18 = train_ncv(common.CHR18, afls)
-m21, s21 = train_ncv(common.CHR21, afls)
+# FL score
+
+def train_fl(diagnosed_chromosome, fls):
+    max_lambdas = np.array([common.calc_max_lambda_score(counts, diagnosed_chromosome) for counts in fls])
+    return float(np.mean(max_lambdas)), float(np.std(max_lambdas))
+
+# Calculating parameters
+
 
 params = {
     common.METHOD_NCV: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
-    common.METHOD_SZ: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
+    common.METHOD_SZ: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES},
+    common.METHOD_FL: {chromosome: {} for chromosome in common.DIAGNOSED_CHROMOSOMES}
 }
+
+# Storing parameters
+
 
 for chromosome in common.DIAGNOSED_CHROMOSOMES:
 
@@ -71,6 +87,10 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     params[common.METHOD_SZ][chromosome][common.ATTR_MEAN] = size_mean
     params[common.METHOD_SZ][chromosome][common.ATTR_STD] = size_std
 
+    # FL parameters
+    fl_mean, fl_std = train_fl(chromosome, afls)
+    params[common.METHOD_FL][chromosome][common.ATTR_MEAN] = fl_mean
+    params[common.METHOD_FL][chromosome][common.ATTR_STD] = fl_std
 
 with open(args.param_file, 'w') as out:
     yaml.dump(params, out, default_flow_style=False)
