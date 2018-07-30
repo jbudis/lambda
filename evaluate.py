@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-import pandas as pd
 import numpy as np
+import common
+
 # import matplotlib.pyplot as plt
 # from scipy import stats
 # from sklearn.decomposition import PCA
@@ -26,22 +27,6 @@ parser.add_argument('counts', help='TSV file with the corrected number or reads 
                                    'and autosomes (chr1..chr22, organised in rows)')
 
 args = parser.parse_args()
-
-AUTOSOMES = ['chr{}'.format(i) for i in range(22)]
-MIN_FL, MAX_FL = 50, 220
-FLS = list(range(MIN_FL, MAX_FL))
-CHR13, CHR18, CHR21 = 12, 17, 20
-DIAGNOSED_CHROMOSOMES = [CHR13, CHR18, CHR21]
-
-counts = pd.read_csv(args.counts, sep='\t', header=0, index_col=0).values
-n_rows, n_cols = counts.shape
-
-assert n_rows == len(AUTOSOMES), 'Number or rows of input count file ' \
-                                 'does not correspond to {} autosomes'.format(len(AUTOSOMES))
-
-assert n_cols == len(FLS), 'Number of columns does not correspond to ' \
-                           'number of used fragment lengths, from {} to {}, ' \
-                           'i.e. {} columns'.format(MIN_FL, MAX_FL, MAX_FL - MIN_FL)
 
 
 def calc_zscore(chr_tris, chromosome_counts):
@@ -67,6 +52,8 @@ def calc_zscore(chr_tris, chromosome_counts):
     return (ps - m) / ss
 
 
+counts = common.load_counts(args.counts)
 counts_per_chromosome = counts.sum(axis=1)
-for diagnosed_chromosome in DIAGNOSED_CHROMOSOMES:
+for diagnosed_chromosome in common.DIAGNOSED_CHROMOSOMES:
     print(diagnosed_chromosome, calc_zscore(diagnosed_chromosome, counts_per_chromosome))
+
