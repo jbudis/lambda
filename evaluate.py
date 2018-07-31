@@ -36,21 +36,21 @@ size_counts = all_counts[:, :common.SZ_FL-common.MIN_FL]
 
 # Combination of scores
 
-def r_chi_square(z1_np, z2_np):
-    command = 'newZ = function(z1, z2) qnorm(pchisq(z1**2 +z2**2, df=2, lower.tail=FALSE, log.p=TRUE), lower.tail=FALSE, log.p=TRUE)'
-    rpy2.robjects.r(command)
-    z1 = rpy2.robjects.numpy2ri.py2ri(np.array([z1_np]))
-    z2 = rpy2.robjects.numpy2ri.py2ri(np.array([z2_np]))
-    rz = rpy2.robjects.r.newZ(z1, z2)
-    return rpy2.robjects.numpy2ri.ri2py(rz)[0]
 
-
-def r_chi_square_s(s):
-    command = 'newZS = function(s) qnorm(pchisq(s, df=2, lower.tail=FALSE, log.p=TRUE), lower.tail=FALSE, log.p=TRUE)'
+def r_chi_square_distance(distance):
+    command = '''
+        newZS = function(distance)  
+            qnorm(pchisq(distance, df=2, lower.tail=FALSE, log.p=TRUE), lower.tail=FALSE, log.p=TRUE)
+    '''
     rpy2.robjects.r(command)
-    s = rpy2.robjects.numpy2ri.py2ri(np.array([s]))
-    rz = rpy2.robjects.r.newZS(s)
+    distance = rpy2.robjects.numpy2ri.py2ri(np.array([distance]))
+    rz = rpy2.robjects.r.newZS(distance)
     return rpy2.robjects.numpy2ri.ri2py(rz)
+
+
+def r_chi_square_scores(z1_np, z2_np):
+    distance = z1_np**2 + z2_np**2
+    return r_chi_square_distance(distance)[0]
 
 
 # Ellipse correction
@@ -61,7 +61,7 @@ def calc_ellipse_dist(diagnosed_chromosome, zx, zy, method_params):
     alpha = np.radians(45)
     distance = (zx*np.cos(alpha) + zy*np.sin(alpha))**2 / vx + \
                (zx*np.sin(alpha) - zy*np.cos(alpha))**2 / vy
-    return r_chi_square_s(distance)[0]
+    return r_chi_square_distance(distance)[0]
 
 
 # Storing results
@@ -99,7 +99,7 @@ for chromosome in common.DIAGNOSED_CHROMOSOMES:
     zscore_items.append({
         METHOD: common.METHOD_NCV_FL,
         CHROMOSOME: chromosome+1,
-        SCORE: r_chi_square(score_ncv, score_fl)
+        SCORE: r_chi_square_scores(score_ncv, score_fl)
     })
 
     # SIZE + FL score
