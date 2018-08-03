@@ -70,15 +70,20 @@ Now use trained parameters to predict trisomy of chromosome 13, 18 and 21.
 
 Healthy samples should have resulting scores lower than 2.5.
 ```bash
-python3 evaluate.py example/test/neg_101.tsv example/my_params.yaml
+python3 evaluate.py example/test/neg.tsv example/my_params.yaml
 ```
 
 Trisomic samples should have scores of affected chromosomes higher than 4. 
 ```bash
-python3 evaluate.py example/test/t21_001.tsv example/my_params.yaml
+python3 evaluate.py example/test/t21.tsv example/my_params.yaml
+```
+
+Samples with uninformative score of the NCV method between 2.5 and 4 may be resolved by combination of other methods (SZ+FL). 
+```bash
+python3 evaluate.py example/test/unf.tsv example/my_params.yaml
 ```
 
 # Citation
-If you find method useful, please cite 
+If you find the method useful, please cite 
 
 Budis J, Gazdarica J, Radvanszky J, Szucs G, Kucharik M, Strieskova L, Gazdaricova I, Harsanyova M, Duris F, Minarik G, Sekelska M. Innovative method for reducing uninformative calls in non-invasive prenatal testing. arXiv preprint arXiv:1806.08552. 2018 Jun 22.
